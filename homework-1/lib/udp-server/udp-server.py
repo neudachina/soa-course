@@ -13,7 +13,7 @@ socket.bind((support.localIP, support.serverPort))
 
 while True:
     message, address = socket.recvfrom(support.bufferSize)
-    request, serialization_type = message.strip().split(b' ')[:2]
+    request, serialization_type = message.strip().decode().split(' ')[:2]
     if request == support.getRequest:
         if serialization_type in list(support.addresses.keys()):
             addr = support.addresses[serialization_type]

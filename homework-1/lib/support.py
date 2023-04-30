@@ -7,7 +7,8 @@ defaultMessage = b'get_time'
 unknownSerializationTypeMessage = b'unknown serialization type\n'
 unknownRequestTypeMessage = b'unknown request type\n'
 
-getRequest = b'get_result'
+getRequest = 'get_result'
+allRequest = 'all'
 
 serverIP = 'server'
 nativeIP = 'native'
@@ -33,15 +34,24 @@ xmlPort = 2008
 
 clientPort = 3000
 
+nativeName = 'native'
+xmlName = 'xml'
+jsonName = 'json'
+yamlName = 'yaml'
+messagepackName = 'messagepack'
+protobufName = 'protobuf'
+avroName = 'avro'
+allName = 'all'
+
 addresses = {
-    b'ALL': (multicastIP, multicastPort),
-    b'NATIVE': (nativeIP, nativePort),
-    b'XML': (xmlIP, xmlPort),
-    b'JSON': (jsonIP, jsonPort),
-    b'YAML': (yamlIP, yamlPort),
-    b'MESSAGEPACK': (messagepackIP, messagepackPort),
-    b'PROTOBUF': (protobufIP, protobufPort),
-    b'AVRO': (avroIP, avroPort)
+    allName: (multicastIP, multicastPort),
+    nativeName: (nativeIP, nativePort),
+    xmlName: (xmlIP, xmlPort),
+    jsonName: (jsonIP, jsonPort),
+    yamlName: (yamlIP, yamlPort),
+    messagepackName: (messagepackIP, messagepackPort),
+    protobufName: (protobufIP, protobufPort),
+    avroName: (avroIP, avroPort)
 }
 
 avroDefinition = """{
