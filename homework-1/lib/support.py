@@ -1,29 +1,27 @@
 import os
 
 localIP = "0.0.0.0"
-bufferSize = 1024
-
 multicastIP = os.getenv("multicastIP", default="224.0.0.0")
+bufferSize = 1024
 formats = 7
 
 serverPort = 2000
 nativePort = 2001
-xmlPort = 2002
+multicastPort = 2002
 jsonPort = 2003
 yamlPort = 2004
 messagepackPort = 2005
 protobufPort = 2006
 avroPort = 2007
+xmlPort = 2008
 
 clientPort = 3000
-multicastPort = 4000
 
 defaultMessage = b'get_time'
 unknownSerializationTypeMessage = b'unknown serialization type\n'
 unknownRequestTypeMessage = b'unknown request type\n'
 
 getRequest = b'get_result'
-
 allRequest = b'ALL'
 nativeRequest = b'NATIVE'
 xmlRequest = b'XML'
