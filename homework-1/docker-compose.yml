@@ -1,0 +1,113 @@
+version: "3"
+
+services:
+  udpserver:
+    build:
+      dockerfile: lib/udp-server/Dockerfile
+      context: .
+    command: python3 lib/udp-server/udp-server.py
+    ports:
+      - "2000:2000/udp"
+    networks:
+      - soa
+
+  native:
+    build:
+      dockerfile: native/Dockerfile
+      context: .
+    command: python3 native/native.py
+    ports:
+      - "2001:2001/udp"
+    networks:
+      - soa
+    depends_on:
+      - udpserver
+    environment:
+      - MULTICAST_GROUP
+
+  xml:
+    build:
+      dockerfile: xml/Dockerfile
+      context: .
+    command: python3 xml/myxml.py
+    ports:
+      - "2002:2002/udp"
+    networks:
+      - soa
+    depends_on:
+      - udpserver
+    environment:
+      - MULTICAST_GROUP
+
+  json:
+    build:
+      dockerfile: json/Dockerfile
+      context: .
+    command: python3 json/myjson.py
+    ports:
+      - "2003:2003/udp"
+    networks:
+      - soa
+    depends_on:
+      - udpserver
+    environment:
+      - MULTICAST_GROUP
+
+  yaml:
+    build:
+      dockerfile: yaml/Dockerfile
+      context: .
+    command: python3 yaml/myyaml.py
+    ports:
+      - "2004:2004/udp"
+    networks:
+      - soa
+    depends_on:
+      - udpserver
+    environment:
+      - MULTICAST_GROUP
+
+  messagepack:
+    build:
+      dockerfile: messagepack/Dockerfile
+      context: .
+    command: python3 messagepack/mymessagepack.py
+    ports:
+      - "2005:2005/udp"
+    networks:
+      - soa
+    depends_on:
+      - udpserver
+    environment:
+      - MULTICAST_GROUP
+
+  protobuf:
+    build:
+      dockerfile: protobuf/Dockerfile
+      context: .
+    command: python3 protobuf/myprotobuf.py
+    ports:
+      - "2006:2006/udp"
+    networks:
+      - soa
+    depends_on:
+      - udpserver
+    environment:
+      - MULTICAST_GROUP
+
+  avro:
+    build:
+      dockerfile: avro/Dockerfile
+      context: .
+    command: python3 avro/myavro.py
+    ports:
+      - "2007:2007/udp"
+    networks:
+      - soa
+    depends_on:
+      - udpserver
+    environment:
+      - MULTICAST_GROUP
+
+networks:
+  soa:

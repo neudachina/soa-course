@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package serialization;
+
+message Object {
+  optional int64 integer = 1;
+  optional float floating = 2;
+  optional string str = 3;
+  repeated int64 list = 4;
+  map<string, string> dictionary = 5;
+}
