@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+package mafia;
+
+enum ConnectionMessageType {
+    NOT_UNIQUE_NAME = 0;
+    INFO = 1;
+    GAME_BEGINS = 2;
+    SESSION_NUMBER = 3;
+}
+
+message ConnectionClientRequest {
+    optional string name = 1;
+    optional int32 session_number = 2;
+}
+
+message ConnectionServerResponse {
+    ConnectionMessageType type = 1;
+    optional string message = 2;
+    optional int32 session_number = 3;
+}
+
+enum DayMessageType {
+    INFO_INPUT = 0;
+    INFO_NO_INPUT = 1;
+    DAY_ENDS = 2;
+}
+
+enum DayClientCommand {
+    INIT = 0;
+    REVEAL = 1;
+    EXECUTE = 2;
+    ENDING = 3;
+}
+
+message DayClientRequest {
+    optional DayClientCommand command = 1;
+    optional string name = 2;
+    optional int32 session_number = 3;
+    optional string additional = 4;
+}
+
+message DayServerResponse {
+    DayMessageType type = 1;
+    optional string message = 2;
+    optional bool ending = 3;
+}
+
+enum NightMessageType {
+    INFO_INPUT_NIGHT = 0;
+    INFO_NO_INPUT_NIGHT = 1;
+    NIGHT_ENDS = 2;
+}
+
+enum NightClientCommand {
+    INIT_NIGHT = 0;
+    PLAYING = 1;
+}
+
+message NightClientRequest {
+    optional NightClientCommand command = 1;
+    optional string name = 2;
+    optional int32 session_number = 3;
+    optional string additional = 4;
+}
+
+message NightServerResponse {
+    NightMessageType type = 1;
+    optional string message = 2;
+    optional bool ending = 3;
+}
+
+message DisconnectClientRequest {
+    string name = 1;
+    int32 session = 2;
+}
+
+service Mafia {
+    rpc connect(stream ConnectionClientRequest) returns (stream ConnectionServerResponse) {}
+    rpc day(DayClientRequest) returns (stream DayServerResponse) {}
+    rpc night(NightClientRequest) returns (stream NightServerResponse) {}
+    rpc disconnect(DisconnectClientRequest) returns (google.protobuf.Empty) {}
+}

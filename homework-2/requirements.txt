@@ -1,0 +1,15 @@
+pip3 install grpcio grpcio-tools
+
+python3 -m grpc_tools.protoc --proto_path=. ./rpc.proto --python_out=. --grpc_python_out=.
+
+
+ВОТ ЭТО НАДО ДОБАВИТЬ В _GRPC.PY
+__________________________________
+from pathlib import Path
+import sys
+
+path_root = Path(__file__).parents[0]
+sys.path.append(str(path_root))
+_________________________________
+
+python3 -m grpc_tools.protoc --proto_path=. ./mafia.proto --python_out=. --grpc_python_out=.
