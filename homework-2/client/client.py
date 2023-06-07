@@ -1,4 +1,5 @@
 from __future__ import print_function
+from signal import signal, SIGINT
 
 import grpc
 import time
@@ -17,32 +18,40 @@ import random
 
 class Client:
     def __init__(self):
+            # def handle_sigterm(*_):
+            #     self.disconnect()
+
+            # signal(SIGINT, handle_sigterm)
             self.name = ''
-            self.session: int = 0
+            self.session: int = 100001234352467
             with grpc.insecure_channel('localhost:50051') as channel:
                 self.stub = mafia_pb2_grpc.MafiaStub(channel)
-                try:
-                    client_str = input('enter "1" if you want to enter automatic mode, otherwise enter "0"\n')
-                    while True:
-                        if client_str != '0' and client_str != '1':
-                            client_str = input('invalid input. try again, please\n') 
-                        else:
-                            self.bot = bool(int(client_str))
-                            break
-                    if self.bot:
-                        print(f'\nBOT MODE ENABLED')
-                    self.connect()
-                except:
-                    self.disconnect()
+                client_str = input('enter "1" if you want to enter automatic mode, otherwise enter "0"\n')
+                while True:
+                    if client_str != '0' and client_str != '1':
+                        client_str = input('invalid input. try again, please\n') 
+                    else:
+                        self.bot = bool(int(client_str))
+                        break
+                if self.bot:
+                    print(f'\nBOT MODE ENABLED')
+                self.connect()
+                
                     
-    def generate_disconnect(self):
-        yield mafia_pb2.ConnectionClientRequest(
-            name=self.name,
-            session=self.session
-        )
+    # def generate_disconnect(self):
+    #     print('DISCONNECTED\n\n')
+    #     return mafia_pb2.ConnectionClientRequest(
+    #         name=self.name,
+    #         session=self.session
+    #     )
                         
     def disconnect(self):
-        self.stub.disconnect(self.generate_disconnect())
+        # print('DISCONNECT')
+        self.stub.disconnect(mafia_pb2.DisconnectClientRequest(
+            name=self.name,
+            session=self.session
+        ))
+        print('\nDISCONNECTED\n')
             
 
     def generate_connection_name_info(self):
@@ -51,28 +60,33 @@ class Client:
         )
 
     def connect(self):
-        if not self.bot:
-            print('\nhello, player! introduce yourself please: ', end='')
-        game_starts = False
-        while not game_starts:
-            if self.bot:
-                self.name = 'bot' + str(random.randint(1, 1000))
-            else:
-                self.name = input().strip()
-                print('')
-            responses = self.stub.connect(self.generate_connection_name_info())
-            for response in responses:
-                if response.type == mafia_pb2.ConnectionMessageType.INFO:
-                    print(response.message)
-                elif response.type == mafia_pb2.ConnectionMessageType.SESSION_NUMBER:
-                    self.session = int(response.session_number)
+        try:
+            if not self.bot:
+                print('\nhello, player! introduce yourself please: ', end='')
+            game_starts = False
+            while not game_starts:
+                if self.bot:
+                    self.name = 'bot' + str(random.randint(1, 1000))
                 else:
-                    print(response.message)
-                    if response.type == mafia_pb2.ConnectionMessageType.GAME_BEGINS:
-                        game_starts = True
-                    break
+                    self.name = input().strip()
+                    print('')
+                responses = self.stub.connect(self.generate_connection_name_info())
+                for response in responses:
+                    if response.type == mafia_pb2.ConnectionMessageType.INFO:
+                        print(response.message)
+                    elif response.type == mafia_pb2.ConnectionMessageType.SESSION_NUMBER:
+                        self.session = int(response.session_number)
+                    else:
+                        print(response.message)
+                        if response.type == mafia_pb2.ConnectionMessageType.GAME_BEGINS:
+                            game_starts = True
+                        break
 
-        self.day()
+            self.day()
+        except:
+            # print('\n\ndisconnected in connect')
+            self.disconnect()
+            # pass
 
     def day(self):
         game_ends = False
@@ -142,7 +156,7 @@ class Client:
                         commands = ' '.join(msg[1:]).split('"')[1::2]
                     if response.message != '':
                         print(response.message)
-                        time.sleep(2)
+                        # time.sleep(2)
                     if response.type == mafia_pb2.DayMessageType.DAY_ENDS:
                         day_ends = True
                         game_ends = response.ending
@@ -162,7 +176,7 @@ class Client:
                             for response in responses:
                                 if response.message != '':
                                     print(response.message)
-                                    time.sleep(2)
+                                    # time.sleep(2)
                             responses = self.stub.day(self.generate_day_message(
                                 command=mafia_pb2.DayClientCommand.EXECUTE,
                                 info=alive[0]
@@ -172,14 +186,14 @@ class Client:
                             for response in responses:
                                 if response.message != '':
                                     print(response.message)
-                                    time.sleep(2)
+                                    # time.sleep(2)
                             responses = self.stub.day(self.generate_day_message(mafia_pb2.DayClientCommand.REVEAL))
                         elif command == 'end':
                             print('\n')
                             # print('in end')
                             for response in responses:
                                 print(response.message)
-                                time.sleep(2)
+                                # time.sleep(2)
                             responses = self.stub.day(self.generate_day_message(mafia_pb2.DayClientCommand.ENDING))
                             input_required = False
                             break
@@ -217,10 +231,11 @@ class Client:
             while not night_ends:
                 for response in responses:
                     print(response.message)
-                    time.sleep(2)
+                    # time.sleep(2)
                     if response.type == mafia_pb2.NightMessageType.NIGHT_ENDS:
                         night_ends = True
                         game_ends = response.ending
+                        # time.sleep(2)
                         break
 
                     if response.type == mafia_pb2.NightMessageType.INFO_NO_INPUT_NIGHT:

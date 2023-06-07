@@ -9,6 +9,9 @@ import copy
 
 import grpc
 
+import sys
+sys.stdout.flush()
+
 
 from pathlib import Path
 import sys
@@ -47,92 +50,103 @@ class MafiaService(mafia_pb2_grpc.MafiaServicer):
         players = self.sessions[session].players.keys()
         for player in players:
             if to_self or player != name:
-                print(f'in put message {message} for {player} in session {session}')
+                print(f'in put message {message} for {player} in session {session}', flush=True)
                 self.sessions[session].players[player].message_queue.put_nowait(copy.deepcopy(message))
 
     def put_message(self, message, name, session):
         self.sessions[session].players[name].message_queue.put_nowait(copy.deepcopy(message))
 
     def connect(self, request_iterator, context):
-        if self.counter == len(self.sessions):
-            self.sessions[self.counter] = MafiaService.Session()
+            if self.counter == len(self.sessions):
+                self.sessions[self.counter] = MafiaService.Session()
 
-        counter = self.counter
-        current_session = self.sessions[counter]
-        connected = False
-        name = ''
-        while not connected:
-            for message in request_iterator:
-                name = message.name
-                if name in list(current_session.players.keys()):
-                    yield mafia_pb2.ConnectionServerResponse(
-                        type=mafia_pb2.ConnectionMessageType.NOT_UNIQUE_NAME,
-                        message='the name you entered already exists. try again, please:'
-                    )
-                else:
-                    current_session.players[name] = MafiaService.Session.Player()
-                    current_session.alive.append(name)
-                    connected = True
-
-                    response = f"hooray! connection of new player {name} succeeded!"
-                    self.put_message_to_everybody(
-                        message=mafia_pb2.ConnectionServerResponse(
-                            type=mafia_pb2.ConnectionMessageType.INFO,
-                            message=response
-                        ), session=counter
-                    )
-
-                    players = list(current_session.players.keys())
-                    players.remove(name)
-                    length = len(players)
-                    if length != 0:
-                        response = f"player{'s' if length > 1 else ''} " \
-                                    f"{', '.join(players)}" \
-                                    f"{' are' if length > 1 else ' is'} already connected"
+            counter = self.counter
+            current_session = self.sessions[counter]
+            connected = False
+            name = ''
+            while not connected:
+                for message in request_iterator:
+                    name = message.name
+                    if name in list(current_session.players.keys()):
+                        yield mafia_pb2.ConnectionServerResponse(
+                            type=mafia_pb2.ConnectionMessageType.NOT_UNIQUE_NAME,
+                            message='the name you entered already exists. try again, please:'
+                        )
                     else:
-                        response = "you were the first, waiting for new players to connect..."
+                        current_session.players[name] = MafiaService.Session.Player()
+                        current_session.alive.append(name)
+                        connected = True
 
-                    self.put_message(
-                        message=mafia_pb2.ConnectionServerResponse(
-                            type=mafia_pb2.ConnectionMessageType.INFO,
-                            message=response
-                        ), name=name, session=counter
-                    )
-
-                    self.put_message(
-                        message=mafia_pb2.ConnectionServerResponse(
-                            type=mafia_pb2.ConnectionMessageType.SESSION_NUMBER,
-                            session_number=self.counter
-                        ), name=name, session=counter
-                    )
-
-                    if length == 3:
-                        self.counter = len(self.sessions.keys())
-                        players = list(current_session.players.keys())
-                        random.shuffle(players)
-                        roles = ['mafia', 'commissioner', 'innocent', 'innocent']
-                        for i in range(len(roles)):
-                            current_session.players[players[i]].role = roles[i]
-                            
+                        response = f"hooray! connection of new player {name} succeeded!"
                         self.put_message_to_everybody(
-                        message=mafia_pb2.ConnectionServerResponse(
-                            type=mafia_pb2.ConnectionMessageType.GAME_BEGINS,
-                            message=f'4 players are connected! let the game begin...'
-                        ), session=counter
-                    )
-                    break
+                            message=mafia_pb2.ConnectionServerResponse(
+                                type=mafia_pb2.ConnectionMessageType.INFO,
+                                message=response
+                            ), session=counter
+                        )
 
-        player = current_session.players[name]
-        while True:
-            try:
-                msg = player.message_queue.get_nowait()
-                if msg.type == mafia_pb2.ConnectionMessageType.GAME_BEGINS:
-                    msg.message += f'\n\nyou role is... {player.role}!\n'
+                        players = list(current_session.players.keys())
+                        players.remove(name)
+                        length = len(players)
+                        if length != 0:
+                            response = f"player{'s' if length > 1 else ''} " \
+                                        f"{', '.join(players)}" \
+                                        f"{' are' if length > 1 else ' is'} already connected"
+                        else:
+                            response = "you were the first, waiting for new players to connect..."
+
+                        self.put_message(
+                            message=mafia_pb2.ConnectionServerResponse(
+                                type=mafia_pb2.ConnectionMessageType.INFO,
+                                message=response
+                            ), name=name, session=counter
+                        )
+
+                        self.put_message(
+                            message=mafia_pb2.ConnectionServerResponse(
+                                type=mafia_pb2.ConnectionMessageType.SESSION_NUMBER,
+                                session_number=self.counter
+                            ), name=name, session=counter
+                        )
+
+                        if length == 3:
+                            self.counter = len(self.sessions.keys())
+                            players = list(current_session.players.keys())
+                            random.shuffle(players)
+                            roles = ['mafia', 'sheriff', 'innocent', 'innocent']
+                            for i in range(len(roles)):
+                                current_session.players[players[i]].role = roles[i]
+                                
+                            self.put_message_to_everybody(
+                            message=mafia_pb2.ConnectionServerResponse(
+                                type=mafia_pb2.ConnectionMessageType.GAME_BEGINS,
+                                message=f'4 players are connected! let the game begin...'
+                            ), session=counter
+                        )
+                        break
+
+            player = current_session.players[name]
+            while True:
+                try:
+                    msg = player.message_queue.get_nowait()
+                    if msg.type == mafia_pb2.ConnectionMessageType.GAME_BEGINS:
+                        msg.message += f'\n\nyou role is... {player.role}!\n'
+                        yield msg
+                        return
                     yield msg
-                    return
-                yield msg
-            except:
-                time.sleep(1)
+                except:
+                    time.sleep(1)
+            
+    # def my_disconnect(self, name, session):
+    #     print('DISCONNECT IN SERVER')
+    #     if session == 100001234352467:
+    #         session = self.counter
+    #     current_session = self.sessions[session]
+    #     if name in current_session.alive:
+    #         current_session.players[name].alive = False
+    #         current_session.alive.remove(name)
+    #         del current_session.players[name]
+            
 
     def day(self, message, context):
         name, session = message.name, int(message.session_number)
@@ -148,7 +162,7 @@ class MafiaService(mafia_pb2_grpc.MafiaServicer):
         if player_command == mafia_pb2.DayClientCommand.INIT:
             message_text = '\nnew day started!\n' + 'alive players: ' + ', '.join(current_session.alive) + '\n'
             if player.alive:
-                if player.role == 'commissioner' and current_session.mafia != '':
+                if player.role == 'sheriff' and current_session.mafia != '':
                     message_text += 'print \"reveal\" if you want to reveal mafia name\n'
                 if not current_session.first_day:
                     message_text += 'print \"execute\" and player name if you want to execute him today\n'
@@ -166,11 +180,11 @@ class MafiaService(mafia_pb2_grpc.MafiaServicer):
 
         elif player_command == mafia_pb2.DayClientCommand.REVEAL:
             print("REVEAL")
-            if player.role == 'commissioner' and current_session.mafia != '':
+            if player.role == 'sheriff' and current_session.mafia != '':
                 self.put_message_to_everybody(
                     message=mafia_pb2.DayServerResponse(
                         type=mafia_pb2.DayMessageType.INFO_INPUT,
-                        message='commissioner wants to reveal mafia name...it\'s ' + current_session.mafia + '!'
+                        message='sheriff wants to reveal mafia name...it\'s ' + current_session.mafia + '!'
                     ), session=session
                 )
             else:
@@ -319,7 +333,7 @@ class MafiaService(mafia_pb2_grpc.MafiaServicer):
             message_type = mafia_pb2.NightMessageType.INFO_NO_INPUT_NIGHT
             message_text = '\nit’s nighttime. everyone is falling asleep\nalive players: ' + ', '.join(current_session.alive) + '\nmafia and sheriff wake up\n'
             if player.alive:
-                if player.role == 'commissioner':
+                if player.role == 'sheriff':
                     message_text += 'sheriff, you can now choose player to check...\n'
                     message_type = mafia_pb2.NightMessageType.INFO_INPUT_NIGHT
                     player_alive = True
@@ -343,7 +357,7 @@ class MafiaService(mafia_pb2_grpc.MafiaServicer):
                         )
                 player_alive = True
                         
-            if player.role == 'commissioner':
+            if player.role == 'sheriff':
                 if current_session.players[message.additional].role == 'mafia':
                     current_session.mafia = message.additional
                     current_session.message_night += 'sheriff chose the right player to check'
@@ -366,7 +380,7 @@ class MafiaService(mafia_pb2_grpc.MafiaServicer):
                 current_session.dead = message.additional
                 flag = 1
                 for pl in current_session.alive:
-                    if current_session.players[pl].role == 'commissioner':
+                    if current_session.players[pl].role == 'sheriff':
                         flag -= 1
                 current_session.night += flag
                 
@@ -435,11 +449,16 @@ class MafiaService(mafia_pb2_grpc.MafiaServicer):
         return 2
     
     def disconnect(self, message, context):
-        name, session = message.name.strip(), int(message.session_number)
+        name, session = message.name.strip(), int(message.session)
+        print('DISCONNECT IN SERVER', name, session)
+        if session == 100001234352467:
+            session = self.counter
         current_session = self.sessions[session]
         if name in current_session.alive:
             current_session.players[name].alive = False
             current_session.alive.remove(name)
+            del current_session.players[name]
+        return mafia_pb2.google_dot_protobuf_dot_empty__pb2.Empty()
 
 
 
